@@ -1,33 +1,47 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import Note from './components/Note'
+import axios from 'axios'
 
 class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      notes: props.notes,
-      newNote: 'uusi muistiinpano...'
+      notes: [],
+      newNote: '',
+      showAll: true
     }
+    console.log('constructor')
+
   }
 
+  componentDidMount() {
+    console.log("did mount")
+    axios
+      .get('http://localhost:3001/notes')
+      .then(response => {
+        console.log('promise fulfilled')
+        this.setState({ notes: response.data})
+      })
+
+  }
 
   addNote = (event) => {
     event.preventDefault()
     const noteObject = {
       content: this.state.newNote,
-      date: new Date().new,
+      date: new Date(),
       important: Math.random() > 0.5,
-      id: this.state.notes.length + 1
     }
 
-    const notes = this.state.notes.concat(noteObject)
-
-    this.setState({
-      notes,
-      newNote: ''
-    })
-
+    axios
+      .post('http://localhost:3001/notes', noteObject)
+      .then(response => {
+        this.setState({
+          notes: this.state.notes.concat(response.data),
+          newnote: ''
+        })
+      })
   }
 
   handleNoteChange = (event) => {
@@ -38,8 +52,9 @@ class App extends React.Component {
   toggleVisible = () => {
     this.setState({ showAll: !this.state.showAll })
   }
-  
+
   render() {
+    console.log('render')
     const notesToShow =
       this.state.showAll ?
         this.state.notes :
