@@ -1,5 +1,7 @@
+import './index.css'
 import React from 'react'
 import axios from 'axios'
+import personService from './services/persons'
 
 class App extends React.Component {
   constructor(props) {
@@ -8,41 +10,102 @@ class App extends React.Component {
       persons: [],
       newName: '',
       newNumber: '',
-      filter: ''
+      filter: '',
+      error: null,
+      msg: null
     }
   }
 
   componentDidMount() {
     console.log('did mount')
-    axios
-      .get('http://localhost:3001/persons')
-      .then(response =>{
+    personService
+      .getAll()
+      .then(response => {
         console.log('promise fulfilled')
-        this.setState({persons: response.data})
+        this.setState({
+          persons: response
+        })
+      })
+      .catch(error => {
+        this.setState({
+          error: 'ei saatu tietoja palvelimelta'
+        })
+        setTimeout(() => {
+          this.setState({ error: null })
+        }, 5000)
       })
   }
 
   addPerson = (event) => {
     event.preventDefault()
-
-    let exists = false
-    this.state.persons.forEach(person => {
-      if (person.name === this.state.newName) exists = true
-    })
-
-    if (exists) return
-
     const personObject = {
       name: this.state.newName,
       number: this.state.newNumber
     }
-    const persons = this.state.persons.concat(personObject)
-    this.setState({
-      persons,
-      newName: '',
-      newNumber: ''
+
+    let exists = false // tarkistetaan onko nimi jo olemassa
+    let found_id = ''
+    this.state.persons.forEach(p => {
+      if (p.name === this.state.newName) {
+        exists = true
+        personObject.id = p.id
+      }
     })
+
+    if (exists) {
+
+      if (window.confirm(personObject.name + ' on jo luetteossa, korvataanko vanha numero uudella?')) {
+
+        // päivitä vanha tieto
+        personService
+          .update(personObject.id, personObject)
+          .then(response => {
+            const updatedPersons = this.state.persons.filter(p => p.id !== response.id)
+
+            this.setState({
+              persons: updatedPersons.concat(response),
+              msg: 'Päivitettiin henkilön ' + personObject.name + " puhelinnumero."
+            })
+            setTimeout(() => {
+              this.setState({ msg: null })
+            }, 5000)
+          })
+          .catch(error => {
+            this.setState({
+              error: 'Ei voitu päivittää henkilön ' + personObject.name + " numeroa!"
+            })
+            setTimeout(() => {
+              this.setState({ error: null })
+            }, 5000)
+          })
+      } else return
+    } else {
+
+      personService // luo uusi tieto
+        .create(personObject)
+        .then(response => {
+          this.setState({
+            persons: this.state.persons.concat(response),
+            newName: '',
+            newNumber: '',
+            msg: 'Lisättiin uusi henkilö: ' + personObject.name + "."
+          })
+          setTimeout(() => {
+            this.setState({ msg: null })
+          }, 5000)
+        })
+        .catch(error => {
+          this.setState({
+            error: 'ei voitu lisätä henkilöä ' + personObject.name
+          })
+          setTimeout(() => {
+            this.setState({ error: null })
+          }, 5000)
+        })
+    }
+
   }
+
 
   handleNameChange = (event) => {
     this.setState({ newName: event.target.value })
@@ -56,12 +119,50 @@ class App extends React.Component {
     this.setState({ filter: event.target.value })
   }
 
+  createDeleteHandler = (person) => {
+    return () => {
+      if (window.confirm('Poistetaanko ' + person.name)) {
+        console.log('deleting', person.id)
+        personService
+          .remove(person.id)
+          .then(response => {
+            this.setState({
+              persons: this.state.persons.filter(p => p.id !== person.id),
+              msg: 'Poistettiin henkilö ' + person.name + "."
+            })
+            setTimeout(() => {
+              this.setState({ msg: null })
+            }, 5000)
+            
+          })
+          .catch(error => {
+            this.setState({
+              error: 'ei voitu poistaa henkilöä ' + person.name
+            })
+            setTimeout(() => {
+              this.setState({ error: null })
+            }, 5000)
+          })
+      }
+    }
+  }
+
+  shownPersons = (app) => {
+    const persons = [...app.persons]
+    return persons.filter(
+      person => person.name
+        .toLowerCase()
+        .indexOf(this.state.filter.toLowerCase()) > -1)
+  }
+
   render() {
-    console.log('render')
+    const persons = this.shownPersons(this.state)
 
     return (
       <div>
         <h2>Puhelinluettelo</h2>
+        <Notification message={this.state.msg} type="message"/>
+        <Notification message={this.state.error} type="error"/>
         <FilterForm filter={this.state.filter} handler={this.handleFilterChange} />
         <h2>Lisää uusi</h2>
         <AddPersonForm
@@ -72,11 +173,16 @@ class App extends React.Component {
           handler2={this.handleNumberChange}
         />
         <h2>Numerot</h2>
-        <Numbers persons={this.state.persons} filter={this.state.filter} />
-      </div>
+        <Numbers persons={persons} deleteHandler={this.createDeleteHandler.bind(this)} />
+      </div >
     )
   }
 }
+
+
+
+
+// --- komponentit ---
 
 const FilterForm = (props) => {
   return (
@@ -99,21 +205,13 @@ const AddPersonForm = (props) => {
 }
 
 const Numbers = (props) => {
-  
-  const shownNames = () => {
-    return props.persons.filter(
-      person => person.name
-        .toLowerCase()
-        .indexOf(props.filter.toLowerCase()) > -1)
-  }
-
+  console.log('draw persons now')
   return (
     <table>
       <tbody>
-        {shownNames().map((person, index) => <Person person={person} key={index} />)}
+        {props.persons.map((person) => <Person person={person} key={person.id} deleteHandler={props.deleteHandler} />)}
       </tbody>
     </table>
-
   )
 }
 
@@ -122,7 +220,19 @@ const Person = (props) => {
     <tr>
       <td>{props.person.name}</td>
       <td>{props.person.number}</td>
+      <td><button onClick={props.deleteHandler(props.person)}>poista</button></td>
     </tr>
+  )
+}
+
+const Notification = ({ message, type }) => {
+  if (message === null) {
+    return null
+  }
+  return (
+    <div className={type}>
+      {message}
+    </div>
   )
 }
 

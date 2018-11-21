@@ -11,14 +11,19 @@
       "id": 2
     },
     {
-      "name": "Arto Järvinen",
-      "number": "040-123456",
-      "id": 3
-    },
-    {
       "name": "Lea Kutvonen",
       "number": "040-123456",
       "id": 4
+    },
+    {
+      "name": "meme",
+      "number": "040-7189221",
+      "id": 6
+    },
+    {
+      "name": "mörkö",
+      "number": "666-666",
+      "id": 9
     }
   ]
 }
