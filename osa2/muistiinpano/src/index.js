@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import App from './App'
-import axios from 'axios'
+//import axios from 'axios'
 
 
-const notes = [
+/*const notes = [
   {
     id: 1,
     content: 'HTML on helppoa',
@@ -23,7 +23,7 @@ const notes = [
     date: '2017-12-10T19:20:14.298Z',
     important: true
   }
-]
+]*/
 
 ReactDOM.render(
   <App />,

@@ -1,9 +1,7 @@
 import './index.css'
 import React from 'react'
-import ReactDOM from 'react-dom'
 import Note from './components/Note'
 import noteService from './services/notes'
-import axios from 'axios'
 
 
 class App extends React.Component {
@@ -40,7 +38,7 @@ class App extends React.Component {
 
   toggleImportanceOf = (id) => {
     return () => {
-      const url = `http://localhost:3001/notes/${id}`
+      //const url = `http://localhost:3001/notes/${id}`
       const note = this.state.notes.find(n => n.id === id)
       const changedNote = { ...note, important: !note.important }
 
